@@ -1,0 +1,26 @@
+<style>
+body {
+  background: black; /* try type yellow */
+  color: white;
+}
+
+.rng {
+  font-family: Lucida;
+  font-size: 50px;
+}
+
+@font-face {
+  font-family: Lucida;
+  src: url(font.ttf);
+}
+</style>
+
+<span class="rng"></span>
+
+<script>
+setInterval(function() {
+	const max = 0.9730,
+    	min = 0.8430;
+	document.querySelector("span").textContent = (Math.random() * (max - min) + min).toFixed(4);
+}, 30)
+</script>
