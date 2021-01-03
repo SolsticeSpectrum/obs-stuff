@@ -1,21 +1,56 @@
 // Ascii Art by movAX13h (blog.thrill-project.com)
 // https://www.shadertoy.com/view/lssGDj
-// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
-// Contact the author for other licensing options
 
-// Always provided by OBS
+#define vec2 float2
+#define vec3 float3
+#define vec4 float4
+#define ivec2 int2
+#define ivec3 int3
+#define ivec4 int4
+#define mat2 float2x2
+#define mat3 float3x3
+#define mat4 float4x4
+#define fract frac
+#define mix lerp
+#define iTime Time.x
+#define iResolution ViewSize
+
+uniform float2 mouse<
+	string name = "Virtual Mouse Coordinates";
+	string field_type = "slider";
+	float2 minimum = {0, 0};
+	float2 maximum = {100., 100.};
+	float2 scale = {.01, .01};
+	float2 step = {.01, .01};
+> = {0., 0.};
+
 uniform float4x4 ViewProj<
 	bool automatic = true;
 >;
 
-// Provided by Stream Effects
+uniform bool direction<
+	string name = "Invert Direction";
+> = true;
+
 uniform float4 Time<
 	bool automatic = true;
 >;
+
 uniform float4 ViewSize<
 	bool automatic = true;
 >;
+
 uniform texture2d InputA<
+	bool automatic = true;
+>;
+
+uniform float4x4 Random <
+	bool visible = false;	
+	string name = "Random Array";
+	string description = "A float4x4 value containing random values between 0 and 1";
+>;
+
+uniform float4x4 Random <
 	bool automatic = true;
 >;
 
@@ -25,9 +60,15 @@ sampler_state def_sampler {
     Filter    = Linear;
 };
 
-float character(int n, float2 p)
+int2 iMouse() {
+	return int2(mouse.x * ViewSize.x, mouse.y * ViewSize.y);
+}
+
+/*ps start*/
+
+float character(int n, vec2 p)
 {
-	p = floor(p*float2(4.0, -4.0) + 2.5);
+	p = floor(p*vec2(4.0, -4.0) + 2.5);
     if (clamp(p.x, 0.0, 4.0) == p.x)
 	{
         if (clamp(p.y, 0.0, 4.0) == p.y)	
@@ -39,10 +80,10 @@ float character(int n, float2 p)
 	return 0.0;
 }
 
-void mainImage( out float4 fragColor, in float2 fragCoord )
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	float2 pix = fragCoord.xy;
-	float3 col = InputA.Sample(def_sampler, floor(pix/8.0)*8.0/ViewSize.xy).rgb;	
+	vec2 pix = fragCoord.xy;
+	vec3 col = InputA.Sample(def_sampler, floor(pix/8.0)*8.0/iResolution.xy).rgb;	
 	
 	float gray = 0.3 * col.r + 0.59 * col.g + 0.11 * col.b;
 	
@@ -55,12 +96,14 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
 	if (gray > 0.7) n = 13199452; // @
 	if (gray > 0.8) n = 11512810; // #
 	
-	float2 p = fmod(pix/4.0, 2.0) - float2(1.0, 1.0);
+	vec2 p = fmod(pix/4.0, 2.0) - vec2(1.0, 1.0);
     
 	col = col*character(n, p);
 	
-	fragColor = float4(col, 1.0);
+	fragColor = vec4(col, 1.0);
 }
+
+/*ps end*/
 
 struct VertFragData {
 	float4 pos : POSITION;
@@ -73,12 +116,12 @@ VertFragData VSDefault(VertFragData vtx) {
 }
 
 float4 PSDefault(VertFragData vtx) : TARGET {
-    float4 col = float4(1., 1., 1., 1.);
-    mainImage(col, vtx.uv * ViewSize.xy);
-    return col;
+	float4 col = float4(1., 1., 1., 1.);
+	mainImage(col, vtx.uv * ViewSize.xy);
+	return col;
 }
 
-technique Draw
+technique Draw 
 {
 	pass
 	{

@@ -1,21 +1,56 @@
 // PIXELATE by Necromurlok
 // https://www.shadertoy.com/view/ltKXzK
-// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
-// Contact the author for other licensing options
 
-// Always provided by OBS
+#define vec2 float2
+#define vec3 float3
+#define vec4 float4
+#define ivec2 int2
+#define ivec3 int3
+#define ivec4 int4
+#define mat2 float2x2
+#define mat3 float3x3
+#define mat4 float4x4
+#define fract frac
+#define mix lerp
+#define iTime Time.x
+#define iResolution ViewSize
+
+uniform float2 mouse<
+	string name = "Virtual Mouse Coordinates";
+	string field_type = "slider";
+	float2 minimum = {0, 0};
+	float2 maximum = {100., 100.};
+	float2 scale = {.01, .01};
+	float2 step = {.01, .01};
+> = {0., 0.};
+
 uniform float4x4 ViewProj<
 	bool automatic = true;
 >;
 
-// Provided by Stream Effects
+uniform bool direction<
+	string name = "Invert Direction";
+> = true;
+
 uniform float4 Time<
 	bool automatic = true;
 >;
+
 uniform float4 ViewSize<
 	bool automatic = true;
 >;
+
 uniform texture2d InputA<
+	bool automatic = true;
+>;
+
+uniform float4x4 Random <
+	bool visible = false;	
+	string name = "Random Array";
+	string description = "A float4x4 value containing random values between 0 and 1";
+>;
+
+uniform float4x4 Random <
 	bool automatic = true;
 >;
 
@@ -25,40 +60,38 @@ sampler_state def_sampler {
     Filter    = Linear;
 };
 
+int2 iMouse() {
+	return int2(mouse.x * ViewSize.x, mouse.y * ViewSize.y);
+}
+
+/*ps start*/
+
 #define PIXELS_PER_LED 22.0
 #define LED_INTENSITY 15.0
 #define VIGNET_INTENSITY 0.0
 
-//#define CHROMATIC_ABERRATION 0.1
-
-//#define INTERFERENCES 2.0
-//#define INTERFERENCE_SIZE 0.1
-//#define INTERFERENCE_SPEED 0.2
-
-void mainImage( out float4 fragColor, in float2 fragCoord )
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	float2 uv = (fragCoord.xy + 0.5) / ViewSize.xy;
+	vec2 uv = (fragCoord.xy + 0.5) / iResolution.xy;
     
 #ifdef INTERFERENCES
     float interference = fract((uv.y + iTime * INTERFERENCE_SPEED) * INTERFERENCES);
-//    uv.y += (1.0 - (smoothstep(INTERFERENCE_SIZE, INTERFERENCE_SIZE, interference / INTERFERENCES)));
     uv.y -= step(INTERFERENCE_SIZE, interference - uv.y) * INTERFERENCE_SIZE;
     
     
 #endif    
           
-    float2 txSize = float2(1.0 / PIXELS_PER_LED, 1.0 / PIXELS_PER_LED);
-    float2 cell = floor(uv * PIXELS_PER_LED) * txSize;
-    float2 txCenter = cell + txSize * 0.5;
-    float2 d2LED = (uv - txCenter);    
-//    float intensity = clamp(1.0 - length(d2LED), 0.0, 1.0);
+    vec2 txSize = vec2(1.0 / PIXELS_PER_LED, 1.0 / PIXELS_PER_LED);
+    vec2 cell = floor(uv * PIXELS_PER_LED) * txSize;
+    vec2 txCenter = cell + txSize * 0.5;
+    vec2 d2LED = (uv - txCenter);    
     float intensity = pow(1.0 - smoothstep(0.0, txSize.x, length(d2LED)), 1.0 / LED_INTENSITY);
     
-    float2 dCenter = uv - 0.5;
+    vec2 dCenter = uv - 0.5;
     float vignet = pow(1.0 - length(dCenter), VIGNET_INTENSITY);
 
 #ifdef CHROMATIC_ABERRATION    
-    float4 col;
+    vec4 col;
     dCenter *= CHROMATIC_ABERRATION * vignet;
     col.r = InputA.Sample(def_sampler, txCenter).r;
     col.g = InputA.Sample(def_sampler, txCenter + dCenter).g;
@@ -67,9 +100,9 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
 #else            
     fragColor = InputA.Sample(def_sampler, txCenter) * intensity * vignet;
 #endif
-    
-//    fragColor = 1.0 - fragColor;
 }
+
+/*ps end*/
 
 struct VertFragData {
 	float4 pos : POSITION;
@@ -82,12 +115,12 @@ VertFragData VSDefault(VertFragData vtx) {
 }
 
 float4 PSDefault(VertFragData vtx) : TARGET {
-    float4 col = float4(1., 1., 1., 1.);
-    mainImage(col, vtx.uv * ViewSize.xy);
-    return col;
+	float4 col = float4(1., 1., 1., 1.);
+	mainImage(col, vtx.uv * ViewSize.xy);
+	return col;
 }
 
-technique Draw
+technique Draw 
 {
 	pass
 	{

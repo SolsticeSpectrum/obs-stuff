@@ -1,0 +1,121 @@
+// Colorize Posterize by cacheflowe
+// https://www.shadertoy.com/view/XdXBzf
+
+#define vec2 float2
+#define vec3 float3
+#define vec4 float4
+#define ivec2 int2
+#define ivec3 int3
+#define ivec4 int4
+#define mat2 float2x2
+#define mat3 float3x3
+#define mat4 float4x4
+#define fract frac
+#define mix lerp
+#define iTime Time.x
+#define iResolution ViewSize
+
+uniform float2 mouse<
+	string name = "Virtual Mouse Coordinates";
+	string field_type = "slider";
+	float2 minimum = {0, 0};
+	float2 maximum = {100., 100.};
+	float2 scale = {.01, .01};
+	float2 step = {.01, .01};
+> = {0., 0.};
+
+uniform float4x4 ViewProj<
+	bool automatic = true;
+>;
+
+uniform bool direction<
+	string name = "Invert Direction";
+> = true;
+
+uniform float4 Time<
+	bool automatic = true;
+>;
+
+uniform float4 ViewSize<
+	bool automatic = true;
+>;
+
+uniform texture2d InputA<
+	bool automatic = true;
+>;
+
+uniform float4x4 Random <
+	bool visible = false;	
+	string name = "Random Array";
+	string description = "A float4x4 value containing random values between 0 and 1";
+>;
+
+uniform float4x4 Random <
+	bool automatic = true;
+>;
+
+sampler_state def_sampler {
+    AddressU  = Clamp;
+    AddressV  = Clamp;
+    Filter    = Linear;
+};
+
+int2 iMouse() {
+	return int2(mouse.x * ViewSize.x, mouse.y * ViewSize.y);
+}
+
+/*ps start*/
+
+float rgbToGray(vec4 rgba) {
+	const vec3 W = vec3(0.2125, 0.7154, 0.0721);
+    return dot(rgba.xyz, W);
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    float posterSteps = 16.0;
+    vec3 color1 = vec3(1.0, 1., 0.);
+    vec3 color2 = vec3(1., 0., 1.);
+	
+    // current location
+	vec2 uv = fragCoord.xy / iResolution.xy;
+    
+    // sample color to grayscale
+    vec4 color = InputA.Sample(def_sampler, uv);
+    float luma = rgbToGray(color);
+    luma = floor(luma * posterSteps) / posterSteps;	// posterize    
+    
+    // fade from black at 0.5 to full color at 0 & 1
+    if(luma < 0.5) {
+        fragColor = vec4(color2 * (1. - luma * 2.), 1.);
+    } else {
+        fragColor = vec4(color1 * (-0.5 + luma * 2.), 1.0);
+    }
+}
+
+/*ps end*/
+
+struct VertFragData {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertFragData VSDefault(VertFragData vtx) {
+	vtx.pos = mul(float4(vtx.pos.xyz, 1.0), ViewProj);
+	return vtx;
+}
+
+float4 PSDefault(VertFragData vtx) : TARGET {
+	float4 col = float4(1., 1., 1., 1.);
+	mainImage(col, vtx.uv * ViewSize.xy);
+	return col;
+}
+
+technique Draw 
+{
+	pass
+	{
+		vertex_shader = VSDefault(vtx);
+		pixel_shader  = PSDefault(vtx); 
+	}
+}

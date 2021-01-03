@@ -1,21 +1,56 @@
 // Gaussian Blur Simple and Fast by existical
 // https://www.shadertoy.com/view/Xltfzj
-// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
-// Contact the author for other licensing options
 
-// Always provided by OBS
+#define vec2 float2
+#define vec3 float3
+#define vec4 float4
+#define ivec2 int2
+#define ivec3 int3
+#define ivec4 int4
+#define mat2 float2x2
+#define mat3 float3x3
+#define mat4 float4x4
+#define fract frac
+#define mix lerp
+#define iTime Time.x
+#define iResolution ViewSize
+
+uniform float2 mouse<
+	string name = "Virtual Mouse Coordinates";
+	string field_type = "slider";
+	float2 minimum = {0, 0};
+	float2 maximum = {100., 100.};
+	float2 scale = {.01, .01};
+	float2 step = {.01, .01};
+> = {0., 0.};
+
 uniform float4x4 ViewProj<
 	bool automatic = true;
 >;
 
-// Provided by Stream Effects
+uniform bool direction<
+	string name = "Invert Direction";
+> = true;
+
 uniform float4 Time<
 	bool automatic = true;
 >;
+
 uniform float4 ViewSize<
 	bool automatic = true;
 >;
+
 uniform texture2d InputA<
+	bool automatic = true;
+>;
+
+uniform float4x4 Random <
+	bool visible = false;	
+	string name = "Random Array";
+	string description = "A float4x4 value containing random values between 0 and 1";
+>;
+
+uniform float4x4 Random <
 	bool automatic = true;
 >;
 
@@ -25,7 +60,13 @@ sampler_state def_sampler {
     Filter    = Linear;
 };
 
-void mainImage( out float4 fragColor, in float2 fragCoord )
+int2 iMouse() {
+	return int2(mouse.x * ViewSize.x, mouse.y * ViewSize.y);
+}
+
+/*ps start*/
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     float Pi = 6.28318530718; // Pi*2
     
@@ -35,12 +76,12 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     float Size = 8.0; // BLUR SIZE (Radius)
     // GAUSSIAN BLUR SETTINGS }}}
    
-    float2 Radius = Size/ViewSize.xy;
+    vec2 Radius = Size/iResolution.xy;
     
     // Normalized pixel coordinates (from 0 to 1)
-    float2 uv = fragCoord/ViewSize.xy;
+    vec2 uv = fragCoord/iResolution.xy;
     // Pixel colour
-    float4 Color = InputA.Sample(def_sampler, uv);
+    vec4 Color = InputA.Sample(def_sampler, uv);
     
     // Blur calculations
     for( float d=0.0; d<Pi; d+=Pi/Directions)
@@ -56,6 +97,8 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     fragColor =  Color;
 }
 
+/*ps end*/
+
 struct VertFragData {
 	float4 pos : POSITION;
 	float2 uv  : TEXCOORD0;
@@ -67,12 +110,12 @@ VertFragData VSDefault(VertFragData vtx) {
 }
 
 float4 PSDefault(VertFragData vtx) : TARGET {
-    float4 col = float4(1., 1., 1., 1.);
-    mainImage(col, vtx.uv * ViewSize.xy);
-    return col;
+	float4 col = float4(1., 1., 1., 1.);
+	mainImage(col, vtx.uv * ViewSize.xy);
+	return col;
 }
 
-technique Draw
+technique Draw 
 {
 	pass
 	{
