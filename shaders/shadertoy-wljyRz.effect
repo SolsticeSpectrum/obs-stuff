@@ -78,15 +78,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec4 img = InputA.Sample(def_sampler, uv);
     
     // you can try and comment / uncomment these three lines
-    float step_y = texel.y*(rand(uv.x)*MAX_OFFSET) * (sin(sin(iTime*0.5))*2.0+1.3);	// modulate offset
-    //float step_y = texel.y*(rand(uv.x)*100.);										// offset without modulation
-    step_y += rand(uv.x*uv.y*iTime)*0.025*sin(iTime);								// shake offset and modulate it
-    step_y = mix(step_y, step_y*rand(uv.x*iTime)*0.5, sin(iTime)); 					// more noisy spikes
+    float step_x = texel.x*(rand(uv.y)*MAX_OFFSET) * (sin(sin(iTime*0.5))*2.0+1.3);	// modulate offset
+    //float step_x = texel.x*(rand(uv.y)*100.);										// offset without modulation
+    step_x += rand(uv.y*uv.x*iTime)*0.025*sin(iTime);								// shake offset and modulate it
+    step_x = mix(step_x, step_x*rand(uv.y*iTime)*0.5, sin(iTime)); 					// more noisy spikes
     
     if ( dot(img,  vec4(0.299, 0.587, 0.114, 0.) ) > 1.2*(sin(iTime)*0.325+0.50)){
-    	uv.y+=step_y;
+    	uv.x+=step_x;
     } else{
-    	uv.y-=step_y;
+    	uv.x-=step_x;
     }
     
     img = InputA.Sample( def_sampler, uv);
