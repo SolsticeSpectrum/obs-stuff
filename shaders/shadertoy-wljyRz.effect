@@ -1,0 +1,122 @@
+// Fake Pixel Sorting for Video by curiouspers
+// https://www.shadertoy.com/view/wljyRz
+
+#define vec2 float2
+#define vec3 float3
+#define vec4 float4
+#define ivec2 int2
+#define ivec3 int3
+#define ivec4 int4
+#define mat2 float2x2
+#define mat3 float3x3
+#define mat4 float4x4
+#define fract frac
+#define mix lerp
+#define iTime Time.x
+#define iResolution ViewSize
+
+uniform float2 mouse<
+	string name = "Virtual Mouse Coordinates";
+	string field_type = "slider";
+	float2 minimum = {0, 0};
+	float2 maximum = {100., 100.};
+	float2 scale = {.01, .01};
+	float2 step = {.01, .01};
+> = {0., 0.};
+
+uniform float4x4 ViewProj<
+	bool automatic = true;
+>;
+
+uniform bool direction<
+	string name = "Invert Direction";
+> = true;
+
+uniform float4 Time<
+	bool automatic = true;
+>;
+
+uniform float4 ViewSize<
+	bool automatic = true;
+>;
+
+uniform texture2d InputA<
+	bool automatic = true;
+>;
+
+uniform float4x4 Random <
+	bool visible = false;	
+	string name = "Random Array";
+	string description = "A float4x4 value containing random values between 0 and 1";
+>;
+
+uniform float4x4 Random <
+	bool automatic = true;
+>;
+
+sampler_state def_sampler {
+    AddressU  = Clamp;
+    AddressV  = Clamp;
+    Filter    = Linear;
+};
+
+int2 iMouse() {
+	return int2(mouse.x * ViewSize.x, mouse.y * ViewSize.y);
+}
+
+/*ps start*/
+
+#define MAX_OFFSET 80.
+
+float rand(float co) { return fract(sin(co*(91.3458)) * 47453.5453); }
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 texel = 1. / iResolution.xy;
+    
+    vec4 img = InputA.Sample(def_sampler, uv);
+    
+    // you can try and comment / uncomment these three lines
+    float step_y = texel.y*(rand(uv.x)*MAX_OFFSET) * (sin(sin(iTime*0.5))*2.0+1.3);	// modulate offset
+    //float step_y = texel.y*(rand(uv.x)*100.);										// offset without modulation
+    step_y += rand(uv.x*uv.y*iTime)*0.025*sin(iTime);								// shake offset and modulate it
+    step_y = mix(step_y, step_y*rand(uv.x*iTime)*0.5, sin(iTime)); 					// more noisy spikes
+    
+    if ( dot(img,  vec4(0.299, 0.587, 0.114, 0.) ) > 1.2*(sin(iTime)*0.325+0.50)){
+    	uv.y+=step_y;
+    } else{
+    	uv.y-=step_y;
+    }
+    
+    img = InputA.Sample( def_sampler, uv);
+    fragColor = img;
+    return;   
+}
+
+/*ps end*/
+
+struct VertFragData {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertFragData VSDefault(VertFragData vtx) {
+	vtx.pos = mul(float4(vtx.pos.xyz, 1.0), ViewProj);
+	return vtx;
+}
+
+float4 PSDefault(VertFragData vtx) : TARGET {
+	float4 col = float4(1., 1., 1., 1.);
+	mainImage(col, vtx.uv * ViewSize.xy);
+	return col;
+}
+
+technique Draw 
+{
+	pass
+	{
+		vertex_shader = VSDefault(vtx);
+		pixel_shader  = PSDefault(vtx); 
+	}
+}
